@@ -1,0 +1,21 @@
+---
+title: "HW2"
+author: "Lin Wang"
+date: "9/19/2020"
+output: github_document
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(data.table)
+```
+## Data Wrangling
+```{r read and merge data}
+dat1 <- read.csv("C:/Users/Hope/Documents/PM566HW/chs_individual.txt")
+head(dat1)
+
+dat2 <- read.csv("C:/Users/Hope/Documents/PM566HW/chs_regional.txt")
+head(dat2)
+```
+
