@@ -58,7 +58,7 @@ merge(n, dat[, .(
   bmi_min = min(bmi, na.rm = TRUE),
   bmi_max = max(bmi, na.rm = TRUE)
 ),
-by = obesity_level][order(obesity_level)])
+by = obesity_level])
 ```
 
 - The obesity_level is coded successfully. 
@@ -67,11 +67,10 @@ by = obesity_level][order(obesity_level)])
 
 ```{r create "smoke_gas_exposure"}
 # create variable
-dat[smoke == 0 & gasstove == 0, smoke_gas_exposure := 1]
-dat[smoke == 0 & gasstove == 1, smoke_gas_exposure := 2]
-dat[smoke == 1 & gasstove == 0, smoke_gas_exposure := 3]
-dat[smoke == 1 & gasstove == 1, smoke_gas_exposure := 4]
-dat[is.na(smoke) | is.na(gasstove), smoke_gas_exposure := NA]
+dat[smoke == 0 & gasstove == 0, smoke_gas_exposure := "none_exposed"]
+dat[smoke == 0 & gasstove == 1, smoke_gas_exposure := "gas_exposed"]
+dat[smoke == 1 & gasstove == 0, smoke_gas_exposure := "smoke_exposed"]
+dat[smoke == 1 & gasstove == 1, smoke_gas_exposure := "all_exposed"]
 
 # dropping NAs
 # dat <- dat[!is.na(smoke_gas_exposure)]
@@ -92,12 +91,16 @@ unique(dat[, .(
   ),
   by = townname][order(townname)])
 
+round(proportions(table(dat$townname, dat$asthma)), digits = 3)
+
 # FEV & asthma by sex
 unique(dat[, .(
   fev_avg = mean(fev, na.rm = TRUE),
   fev_sd = sd(fev, na.rm = TRUE)
   ),
   by = male][order(male)])
+
+round(proportions(table(dat$male, dat$asthma)), digits = 3)
 
 # FEV & asthma by obesity level
 unique(dat[, .(
@@ -106,12 +109,16 @@ unique(dat[, .(
   ),
   by = obesity_level][order(obesity_level)])
 
+round(proportions(table(dat$obesity_level, dat$asthma)), digits = 3)
+
 # FEV & asthma by smoke_gas_exposure
 unique(dat[, .(
   fev_avg = mean(fev, na.rm = TRUE),
   fev_sd = sd(fev, na.rm = TRUE)
   ),
   by = smoke_gas_exposure][order(smoke_gas_exposure)])
+
+round(proportions(table(dat$smoke_gas_exposure, dat$asthma)), digits = 3)
 ```
 
 ## EDA
@@ -121,43 +128,77 @@ The primary questions:
 - What is the association between PM2.5 exposure and FEV?
 
 ```{r EDA}
-
+library(ggplot2)
 ```
 
 1. Facet plot showing scatterplots with regression lines of BMI vs FEV by “townname”.
 
-```{r}
-
+```{r scatterplot}
+ggplot(data = dat, 
+       mapping = aes(x = bmi, y = fev, color = townname))+
+  geom_point()+
+  stat_smooth(method = lm)+
+  facet_wrap(~townname, nrow = 4)
 ```
 
 2. Stacked histograms of FEV by BMI category and FEV by smoke/gas exposure. Use different color schemes than the ggplot default.
 
-```{r}
+```{r histogram}
+ggplot(dat, mapping = aes(x = fev, color = obesity_level, fill = obesity_level))+
+  geom_histogram(binwidth = 50, alpha = 0.7,position="identity")+
+  scale_fill_brewer(palette = "PuOr")+
+  scale_color_brewer(palette = "Purples")
 
+dat %>%
+  filter(!(smoke_gas_exposure %in% NA)) %>%
+ggplot(mapping = aes(x = fev, color = smoke_gas_exposure, fill = smoke_gas_exposure))+
+  geom_histogram(binwidth = 50, position="identity")+
+  scale_fill_brewer(palette = "PuOr")+
+  scale_color_brewer(palette = "Purples")
 ```
 
 3. Barchart of BMI by smoke/gas exposure.
 
 ```{r}
-
+dat %>%
+  filter(!(smoke_gas_exposure %in% NA)) %>%
+  ggplot()+
+  geom_bar(mapping = aes(x = obesity_level, color = smoke_gas_exposure, fill = smoke_gas_exposure))+
+  scale_fill_brewer(palette = "Purples")+
+  scale_color_brewer(palette = "Purples")
 ```
 
 4. Statistical summary graphs of FEV by BMI and FEV by smoke/gas exposure category.
 
 ```{r}
+dat %>%
+  filter(!(obesity_level %in% NA)) %>%
+ggplot(mapping = aes(x = obesity_level, y = fev))+
+  stat_summary(fun.data = "mean_sdl")
 
+dat %>%
+  filter(!(smoke_gas_exposure %in% NA)) %>%
+ggplot(mapping = aes(x = smoke_gas_exposure, y = fev))+
+  stat_summary(fun.data = "mean_sdl")
 ```
 
 5. A leaflet map showing the concentrations of PM2.5 mass in each of the CHS communities.
 
 ```{r}
+library(leaflet)
 
+pm25.pal = colorNumeric(c("blue", "purple", "red"), domain = dat$pm25_mass)
+
+leaflet(dat) %>%
+  addProviderTiles("OpenStreetMap") %>%
+  addCircles(lat = ~lat, lng = ~lon, opacity = 1, fillOpacity = 1, radius = 500, color = ~pm25.pal(pm25_mass)) %>%
+  addLegend(position = "bottomleft", pal = pm25.pal, values = dat$pm25_mass , title = "PM2.5 mass concentrations", opacity = 1)
 ```
 
 6. Choose a visualization to examine whether PM2.5 mass is associated with FEV.
 
 ```{r}
-
+plot(dat$pm25_mass, dat$fev)
 ```
 
 
