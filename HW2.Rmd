@@ -87,38 +87,42 @@ count(dat, smoke_gas_exposure)
 # FEV & asthma by town
 unique(dat[, .(
   fev_avg = mean(fev, na.rm = TRUE),
-  fev_sd = sd(fev, na.rm = TRUE)
+  fev_sd = sd(fev, na.rm = TRUE),
+  asthma_avg = mean(asthma, na.rm = TRUE)
   ),
   by = townname][order(townname)])
 
-round(proportions(table(dat$townname, dat$asthma)), digits = 3)
+# round(proportions(table(dat$townname, dat$asthma)), digits = 3)
 
 # FEV & asthma by sex
 unique(dat[, .(
   fev_avg = mean(fev, na.rm = TRUE),
-  fev_sd = sd(fev, na.rm = TRUE)
+  fev_sd = sd(fev, na.rm = TRUE),
+  asthma_avg = mean(asthma, na.rm = TRUE)
   ),
   by = male][order(male)])
 
-round(proportions(table(dat$male, dat$asthma)), digits = 3)
+# round(proportions(table(dat$male, dat$asthma)), digits = 3)
 
 # FEV & asthma by obesity level
 unique(dat[, .(
   fev_avg = mean(fev, na.rm = TRUE),
-  fev_sd = sd(fev, na.rm = TRUE)
+  fev_sd = sd(fev, na.rm = TRUE),
+  asthma_avg = mean(asthma, na.rm = TRUE)
   ),
   by = obesity_level][order(obesity_level)])
 
-round(proportions(table(dat$obesity_level, dat$asthma)), digits = 3)
+# round(proportions(table(dat$obesity_level, dat$asthma)), digits = 3)
 
 # FEV & asthma by smoke_gas_exposure
 unique(dat[, .(
   fev_avg = mean(fev, na.rm = TRUE),
-  fev_sd = sd(fev, na.rm = TRUE)
+  fev_sd = sd(fev, na.rm = TRUE),
+  asthma_avg = mean(asthma, na.rm = TRUE)
   ),
   by = smoke_gas_exposure][order(smoke_gas_exposure)])
 
-round(proportions(table(dat$smoke_gas_exposure, dat$asthma)), digits = 3)
+# round(proportions(table(dat$smoke_gas_exposure, dat$asthma)), digits = 3)
 ```
 
 - Here the average and sd of fev are successfully summarized, however, I'm not sure how to calculate the proportion of asthma(which is a binary variable) using data.table, so I simply use table() to generate the proportions.
