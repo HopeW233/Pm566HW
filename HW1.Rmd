@@ -16,8 +16,8 @@ library(leaflet)
 
 ## 1. Read in the data, conduct EDA checklist 2-4
 ```{r}
-ca2004 <- data.table::fread("/Users/Hope/OneDrive/Documents/20 Fall/PM566/HW/HW1/cadata2004.csv")
-ca2019 <- data.table::fread("/Users/Hope/OneDrive/Documents/20 Fall/PM566/HW/HW1/cadata2019.csv")
+ca2004 <- data.table::fread("/Users/Hope/OneDrive/Documents/20 Fall/PM566/HW/cadata2004.csv")
+ca2019 <- data.table::fread("/Users/Hope/OneDrive/Documents/20 Fall/PM566/HW/cadata2019.csv")
 ```
 ### Check the dimensions, headers, footers, variable names and variable types
 ```{r}
@@ -48,7 +48,7 @@ head(pm)
 
 ## 3. Create a basic map
 ```{r}
-yr.pal=colorNumeric(c('yellow','red'), domain = pm$Year)
+yr.pal=colorFactor(c('yellow','red'), domain = pm$Year)
 leaflet(pm) %>%
   addProviderTiles("OpenStreetMap") %>%
   addCircles(lat = ~lat, lng = ~lon, opacity = 1, fillOpacity = 1, radius = 500, color = ~yr.pal(Year)) %>%
@@ -93,12 +93,12 @@ ggplot(pm_s)+
 
 ### County level
 ```{r}
-pm_c <- group_by(pm2, Year, COUNTY_CODE) %>% 
+pm_c <- group_by(pm2, Year, County) %>% 
   summarise(PM = mean(PM, na.rm = TRUE))
 summary(pm_c$PM)
 pm_c=mutate(pm_c, xyear=as.numeric(as.character(Year))) 
 ggplot(pm_c)+
-  geom_line(mapping = aes(x=xyear, y=PM, color=factor(COUNTY_CODE)))
+  geom_line(mapping = aes(x=xyear, y=PM, color=factor(County)))
 ```
 
 - We calculate the mean PM2.5 concentration for different counties, and plot it with consecutive year to see the difference. In general, the concentration of PM2.5 has decreased among most counties from 2004 to 2019 with a few counties increasing
@@ -110,8 +110,7 @@ pm_la <- filter(pm2, County == "Los Angeles" & Site == "Azusa") %>%
   select(Year, PM, Date)
 pm_la
 ggplot(pm_la)+
-  geom_point(mapping = aes(x=Date, y=PM, color=Year))+
-  facet_wrap(~Year)
+  geom_point(mapping = aes(x=Date, y=PM, color=Year))
 ```
 
 - There are larger variation and higher values of PM2.5 in 2004 than that in 2019. Overall, a similar pattern appears for the PM2.5 under 30 ug/m3 in 2004 and 2019. We can conclude that daily PM2.5 has decreased from 2004 to 2019 at Azusa site.
