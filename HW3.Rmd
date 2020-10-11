@@ -1,0 +1,38 @@
+---
+title: "HW3"
+author: "Lin Wang"
+date: "10/10/2020"
+output: html_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(include  = TRUE)
+library(httr)
+library(xml2)
+library(stringr)
+```
+
+## APIs
+
+#### 1. Using the NCBI API, look for papers that show up under the term "sars-cov-2 trial vaccine." Look for the data in the pubmed database, and then retrieve the details of the paper as shown in lab 7. How many papers were you able to find?
+
+```{r}
+# Downloading the website
+website <- xml2::read_html("https://pubmed.ncbi.nlm.nih.gov/?term=sars-cov-2+trial+vaccine")
+
+# Finding the counts
+counts <- xml2::xml_find_first(website, "/html/body/main/div[9]/div[2]/div[2]/div[1]/span")
+counts
+# Turning it into text
+counts <- as.character(counts)
+
+# Extracting the data using regex
+stringr::str_extract(counts, "[0-9,]+")
+```
+
+
+
+
+## Text Mining
+
+
