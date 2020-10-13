@@ -17,10 +17,10 @@ library(stats)
 1. After merging the data, make sure you don’t have any duplicates by counting the number of rows. Make sure it matches.
 
 ```{r read and merge data}
-dat1 <- read.csv("C:/Users/Hope/Documents/PM566HW/chs_individual.txt")
+dat1 <- read.csv("C:/Users/Hope/Documents/PM566HW/HW2/chs_individual.txt")
 dim(dat1)
 
-dat2 <- read.csv("C:/Users/Hope/Documents/PM566HW/chs_regional.txt")
+dat2 <- read.csv("C:/Users/Hope/Documents/PM566HW/HW2/chs_regional.txt")
 dim(dat2)
 
 dat <- merge(

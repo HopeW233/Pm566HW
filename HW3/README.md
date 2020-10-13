@@ -492,7 +492,7 @@ dat %>%
   ggtitle("The top 10 common bigrams")
 ```
 
-![](HW3_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
 
 ``` r
 # removing stop words
@@ -511,7 +511,7 @@ dat_unitted %>%
   ggtitle("The top 10 common bigrams after removing stop words")
 ```
 
-![](HW3_files/figure-gfm/unnamed-chunk-2-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-2-2.png)<!-- -->
 
 3.  Calculate the TF-IDF value for each word-search term combination.
     (here you want the search term to be the “document”) What are the 5
