@@ -8,6 +8,38 @@ knitr::opts_chunk$set(include  = TRUE)
 library(httr)
 library(xml2)
 library(stringr)
+library(readr)
+library(tidytext)
+library(dplyr)
+```
+
+    ## 
+    ## Attaching package: 'dplyr'
+
+    ## The following objects are masked from 'package:stats':
+    ## 
+    ##     filter, lag
+
+    ## The following objects are masked from 'package:base':
+    ## 
+    ##     intersect, setdiff, setequal, union
+
+``` r
+library(tidyverse)
+```
+
+    ## -- Attaching packages ------------------------------------------------------------------------------------------------------------------------------------- tidyverse 1.3.0 --
+
+    ## v ggplot2 3.3.2     v purrr   0.3.4
+    ## v tibble  3.0.3     v forcats 0.5.0
+    ## v tidyr   1.1.1
+
+    ## -- Conflicts ---------------------------------------------------------------------------------------------------------------------------------------- tidyverse_conflicts() --
+    ## x dplyr::filter() masks stats::filter()
+    ## x dplyr::lag()    masks stats::lag()
+
+``` r
+library(ggplot2)
 ```
 
 ## APIs
@@ -375,3 +407,142 @@ knitr::kable(database)
   - The dataset is successfully created.
 
 ## Text Mining
+
+``` r
+dat <- read_csv("https://raw.githubusercontent.com/USCbiostats/data-science-data/master/03_pubmed/pubmed.csv")
+```
+
+    ## Parsed with column specification:
+    ## cols(
+    ##   abstract = col_character(),
+    ##   term = col_character()
+    ## )
+
+1.  Tokenize the abstracts and count the number of each token. Do you
+    see anything interesting? Does removing stop words change what
+    tokens appear as the most frequent? What are the 5 most common
+    tokens for each search term after removing stop words?
+
+<!-- end list -->
+
+``` r
+# counting the number of each token
+dat %>%
+  unnest_tokens(token, abstract) %>%
+  count(token, sort = TRUE)
+```
+
+    ## # A tibble: 20,567 x 2
+    ##    token     n
+    ##    <chr> <int>
+    ##  1 the   28126
+    ##  2 of    24760
+    ##  3 and   19993
+    ##  4 in    14653
+    ##  5 to    10920
+    ##  6 a      8245
+    ##  7 with   8038
+    ##  8 covid  7275
+    ##  9 19     7080
+    ## 10 is     5649
+    ## # ... with 20,557 more rows
+
+``` r
+# removing stop words
+dat %>%
+  unnest_tokens(token, abstract) %>%
+  filter(!(token %in% stop_words$word)) %>%
+  group_by(term) %>%
+  count(token, sort = TRUE) %>%
+  top_n(5, n)
+```
+
+    ## # A tibble: 25 x 3
+    ## # Groups:   term [5]
+    ##    term            token            n
+    ##    <chr>           <chr>        <int>
+    ##  1 covid           covid         7275
+    ##  2 covid           19            7035
+    ##  3 prostate cancer cancer        3840
+    ##  4 prostate cancer prostate      3832
+    ##  5 covid           patients      2293
+    ##  6 preeclampsia    pre           2038
+    ##  7 preeclampsia    eclampsia     2005
+    ##  8 preeclampsia    preeclampsia  1863
+    ##  9 preeclampsia    women         1196
+    ## 10 preeclampsia    pregnancy      969
+    ## # ... with 15 more rows
+
+  - The top 10 tokens mostly are stop words, covid 19 is the most
+
+<!-- end list -->
+
+2.  Tokenize the abstracts into bigrams. Find the 10 most common bigram
+    and visualize them with ggplot2.
+
+<!-- end list -->
+
+``` r
+dat %>%
+  unnest_ngrams(token, abstract, n=2) %>%
+  count(token, sort = TRUE) %>%
+  top_n(10, n) %>%
+  ggplot(aes(x = n, y = fct_reorder(token, n)))+
+  geom_col()+
+  ggtitle("The top 10 common bigrams")
+```
+
+![](HW3_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+
+``` r
+# removing stop words
+dat_unitted <- dat %>%
+  unnest_ngrams(token, abstract, n = 2) %>%
+  separate(token, into = c("word1", "word2"), sep = " ") %>%
+  anti_join(tidytext::stop_words, by = c("word1" = "word")) %>%
+  anti_join(tidytext::stop_words, by = c("word2" = "word")) %>%
+  unite(bigram, word1, word2, sep = " ")
+
+dat_unitted %>%
+  count(bigram, sort = TRUE) %>%
+  top_n(10, n) %>%
+  ggplot(aes(x = n, y = fct_reorder(bigram, n)))+
+  geom_col()+
+  ggtitle("The top 10 common bigrams after removing stop words")
+```
+
+![](HW3_files/figure-gfm/unnamed-chunk-2-2.png)<!-- -->
+
+3.  Calculate the TF-IDF value for each word-search term combination.
+    (here you want the search term to be the “document”) What are the 5
+    tokens from each search term with the highest TF-IDF value? How are
+    the results different from the answers you got in question 1?
+
+<!-- end list -->
+
+``` r
+dat %>%
+  unnest_tokens(token, abstract) %>%
+  filter(!(token %in% stop_words$word)) %>%
+  group_by(term) %>%
+  count(token, sort = TRUE) %>%
+  bind_tf_idf(token, term, n) %>%
+  arrange(desc(tf_idf)) %>%
+  top_n(5, n)
+```
+
+    ## # A tibble: 25 x 6
+    ## # Groups:   term [5]
+    ##    term            token            n      tf   idf tf_idf
+    ##    <chr>           <chr>        <int>   <dbl> <dbl>  <dbl>
+    ##  1 covid           covid         7275 0.0647  1.61  0.104 
+    ##  2 prostate cancer prostate      3832 0.0563  1.61  0.0906
+    ##  3 preeclampsia    eclampsia     2005 0.0255  1.61  0.0411
+    ##  4 preeclampsia    preeclampsia  1863 0.0237  1.61  0.0382
+    ##  5 meningitis      meningitis     429 0.0164  1.61  0.0264
+    ##  6 cystic fibrosis cf             625 0.0234  0.916 0.0215
+    ##  7 cystic fibrosis fibrosis       867 0.0325  0.511 0.0166
+    ##  8 cystic fibrosis cystic         862 0.0323  0.511 0.0165
+    ##  9 meningitis      meningeal      219 0.00837 1.61  0.0135
+    ## 10 covid           pandemic       800 0.00711 1.61  0.0114
+    ## # ... with 15 more rows

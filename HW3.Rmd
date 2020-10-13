@@ -10,6 +10,11 @@ knitr::opts_chunk$set(include  = TRUE)
 library(httr)
 library(xml2)
 library(stringr)
+library(readr)
+library(tidytext)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
 ```
 
 ## APIs
@@ -34,7 +39,7 @@ stringr::str_extract(counts, "[0-9,]+")
 
 2. Using the list of pubmed ids you retrieved, download each papers’ details using the query parameter rettype = abstract. If you get more than 250 ids, just keep the first 250.
 
-```{r download paper details, eval=TRUE, }
+```{r download paper details, eval=TRUE}
 # Find paper ids under the term
 query_ids <- GET(
   url   = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
@@ -122,8 +127,70 @@ knitr::kable(database)
 
 ## Text Mining
 
-```{r}
-
+```{r get data}
+dat <- read_csv("https://raw.githubusercontent.com/USCbiostats/data-science-data/master/03_pubmed/pubmed.csv")
 ```
+
+1. Tokenize the abstracts and count the number of each token. Do you see anything interesting? Does removing stop words change what tokens appear as the most frequent? What are the 5 most common tokens for each search term after removing stop words?
+
+```{r}
+# counting the number of each token
+dat %>%
+  unnest_tokens(token, abstract) %>%
+  count(token, sort = TRUE)
+
+# removing stop words
+dat %>%
+  unnest_tokens(token, abstract) %>%
+  filter(!(token %in% stop_words$word)) %>%
+  group_by(term) %>%
+  count(token, sort = TRUE) %>%
+  top_n(5, n)
+```
+
+- The top 10 tokens mostly are stop words, covid 19 is the most 
+
+2. Tokenize the abstracts into bigrams. Find the 10 most common bigram and visualize them with ggplot2.
+
+```{r}
+dat %>%
+  unnest_ngrams(token, abstract, n=2) %>%
+  count(token, sort = TRUE) %>%
+  top_n(10, n) %>%
+  ggplot(aes(x = n, y = fct_reorder(token, n)))+
+  geom_col()+
+  ggtitle("The top 10 common bigrams")
+
+# removing stop words
+dat_unitted <- dat %>%
+  unnest_ngrams(token, abstract, n = 2) %>%
+  separate(token, into = c("word1", "word2"), sep = " ") %>%
+  anti_join(tidytext::stop_words, by = c("word1" = "word")) %>%
+  anti_join(tidytext::stop_words, by = c("word2" = "word")) %>%
+  unite(bigram, word1, word2, sep = " ")
+
+dat_unitted %>%
+  count(bigram, sort = TRUE) %>%
+  top_n(10, n) %>%
+  ggplot(aes(x = n, y = fct_reorder(bigram, n)))+
+  geom_col()+
+  ggtitle("The top 10 common bigrams after removing stop words")
+```
+
+3. Calculate the TF-IDF value for each word-search term combination. (here you want the search term to be the “document”) What are the 5 tokens from each search term with the highest TF-IDF value? How are the results different from the answers you got in question 1?
+
+```{r}
+dat %>%
+  unnest_tokens(token, abstract) %>%
+  filter(!(token %in% stop_words$word)) %>%
+  group_by(term) %>%
+  count(token, sort = TRUE) %>%
+  bind_tf_idf(token, term, n) %>%
+  arrange(desc(tf_idf)) %>%
+  top_n(5, n)
+```
+
+
+
 
 
