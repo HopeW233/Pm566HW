@@ -1,0 +1,116 @@
+---
+title: "HW1-EDA"
+author: "Lin Wang"
+date: "9/1/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(data.table)
+library(tidyverse)
+library(leaflet)
+```
+
+# Steps
+
+## 1. Read in the data, conduct EDA checklist 2-4
+```{r}
+ca2004 <- data.table::fread("/Users/Hope/OneDrive/Documents/20 Fall/PM566/HW/cadata2004.csv")
+ca2019 <- data.table::fread("/Users/Hope/OneDrive/Documents/20 Fall/PM566/HW/cadata2019.csv")
+```
+### Check the dimensions, headers, footers, variable names and variable types
+```{r}
+dim(ca2004)
+dim(ca2019)
+head(ca2004)
+head(ca2019)
+tail(ca2004)
+tail(ca2019)
+str(ca2004)
+str(ca2019)
+# check key variables
+summary(ca2004$`Daily Mean PM2.5 Concentration`)
+summary(ca2019$`Daily Mean PM2.5 Concentration`)
+```
+
+- There are 19233 rows and 20 columns in 2004 dataset, while 53328 rows and 20 columns in 2019 dataset.Both datasets contain 20 variables which includes daily mean PM2.5 concentration, site location, state and county name. When we tail the datasets, it looks like the date they documented is not consecutive. And we summarize the mean PM2.5 concentration for both datasets. The results show the minimum value of daily mean PM2.5 concentration are -0.1 for 2004 and -2.2 for 2019, and the maximum value is 251 for 2004, which seems suspicious.
+
+## 2. Combine dataset, create new column, rename the key variables
+```{r}
+library(dplyr)
+ca2004 = mutate(ca2004, Year=2004) 
+ca2019 = mutate(ca2019, Year=2019)
+pm <- rbind(ca2004, ca2019) %>%
+  rename(PM=`Daily Mean PM2.5 Concentration`, lat=SITE_LATITUDE, lon=SITE_LONGITUDE, State=STATE, County=COUNTY, Site=`Site Name`, ID=`Site ID`, AQI=`DAILY_AQI_VALUE`)
+head(pm)
+```
+
+## 3. Create a basic map
+```{r}
+yr.pal=colorFactor(c('yellow','red'), domain = pm$Year)
+leaflet(pm) %>%
+  addProviderTiles("OpenStreetMap") %>%
+  addCircles(lat = ~lat, lng = ~lon, opacity = 1, fillOpacity = 1, radius = 500, color = ~yr.pal(Year)) %>%
+  addLegend(position = "bottomright", pal = yr.pal, values = pm$Year, title = "Year", opacity = 1)
+```
+
+- The map colors the circle differently by year, and indicate locations of the sites throughout California. We can see there are more sites in 2019 than in 2004, and most sites are located near the west coast, the yellow circle represents sites in 2004 while red one represents that in 2019, and circles overlap each other.
+
+## 4. Check and validate any missing or implausible values of PM2.5
+```{r}
+mean(is.na(pm))
+pm2 <- pm[pm$PM>0]
+summary(pm2$PM)
+tail(pm2[order(PM)])
+table(pm2$Year)
+```
+
+- The proportion of missing value is low(0.00355), so we choose to ignore it. 
+- The negative value for PM2.5 is invalid, so it should be excluded.
+- We can see the maximum pm2.5 is 251 ug/m3 at Yosemite village vistor center on 7/18/2004, it is likely because of the mountain fire activity. Today(9/9/20)'s live data show PM2.5 level is at 320 ug/m3(1-hr avg) and 135 ug/m3(24-hr avg) in Yosemite National Park. So this data is convinced probably.
+
+## 5. EDA at Three spatial levels
+### State level
+```{r}
+pmn1=mean(ca2004$`Daily Mean PM2.5 Concentration`, na.rm = TRUE)
+pmn2=mean(ca2019$`Daily Mean PM2.5 Concentration`, na.rm = TRUE)
+pmn1
+pmn2
+ 
+ggplot(pm2)+
+  geom_boxplot(mapping = aes(group=Year, y=PM, color=Year))+
+  facet_wrap(~Year, nrow = 2)
+# take a look at different month
+pm_s=mutate(pm2, month=substr(pm2$Date, 1, 2))
+ggplot(pm_s)+
+  geom_boxplot(mapping = aes(x=month, y=PM, color=Year))+
+  facet_wrap(~Year, nrow = 2)
+```
+
+- The mean of daily concentration of PM2.5 have decreased in California from 2004 to 2019(13.12497 to 7.742194).
+- From the boxplot above, we can also see the concentration of PM2.5 is higher in 2004 than in 2019, and especially high in July.
+
+### County level
+```{r}
+pm_c <- group_by(pm2, Year, County) %>% 
+  summarise(PM = mean(PM, na.rm = TRUE))
+summary(pm_c$PM)
+pm_c=mutate(pm_c, xyear=as.numeric(as.character(Year))) 
+ggplot(pm_c)+
+  geom_line(mapping = aes(x=xyear, y=PM, color=factor(County)))
+```
+
+- We calculate the mean PM2.5 concentration for different counties, and plot it with consecutive year to see the difference. In general, the concentration of PM2.5 has decreased among most counties from 2004 to 2019 with a few counties increasing
+
+### Site in Los Angeles
+```{r}
+# take a look at Azusa site in LA county
+pm_la <- filter(pm2, County == "Los Angeles" & Site == "Azusa") %>%
+  select(Year, PM, Date)
+pm_la
+ggplot(pm_la)+
+  geom_point(mapping = aes(x=Date, y=PM, color=Year))
+```
+
+- There are larger variation and higher values of PM2.5 in 2004 than that in 2019. Overall, a similar pattern appears for the PM2.5 under 30 ug/m3 in 2004 and 2019. We can conclude that daily PM2.5 has decreased from 2004 to 2019 at Azusa site.
