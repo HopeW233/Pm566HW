@@ -5,6 +5,8 @@ date: "10/10/2020"
 output: github_document
 ---
 
+You can view the report [here](https://ghcdn.rawgit.org/HopeW233/Pm566HW/master/HW3/README.html)
+
 ```{r setup}
 knitr::opts_chunk$set(include  = TRUE)
 library(httr)
@@ -35,7 +37,7 @@ counts <- as.character(counts)
 stringr::str_extract(counts, "[0-9,]+")
 ```
 
-- There are 560 papers related the term "sars-cov-2 trial vaccine".
+- There are 560 papers related the term "sars-cov-2 trial vaccine"(10/13/2020).
 
 2. Using the list of pubmed ids you retrieved, download each papers’ details using the query parameter rettype = abstract. If you get more than 250 ids, just keep the first 250.
 
@@ -120,39 +122,52 @@ database <- data.frame(
   Date = dates,
   Abstract = abstracts
 )
-knitr::kable(database)
+knitr::kable(database[1:5, ])
 ```
 
-- The dataset is successfully created.
+- Check the first 5 papers and the dataset is successfully created.
 
 ## Text Mining
 
-```{r get data}
+```{r get data, warning=FALSE}
 dat <- read_csv("https://raw.githubusercontent.com/USCbiostats/data-science-data/master/03_pubmed/pubmed.csv")
 ```
 
 1. Tokenize the abstracts and count the number of each token. Do you see anything interesting? Does removing stop words change what tokens appear as the most frequent? What are the 5 most common tokens for each search term after removing stop words?
 
-```{r}
+```{r count tokens}
 # counting the number of each token
 dat %>%
   unnest_tokens(token, abstract) %>%
-  count(token, sort = TRUE)
+  count(token, sort = TRUE) %>%
+  top_n(10, n)
 
 # removing stop words
 dat %>%
   unnest_tokens(token, abstract) %>%
   filter(!(token %in% stop_words$word)) %>%
+  count(token, sort = TRUE) %>%
+  top_n(10, n)
+
+# find 5 most common tokens
+tokens <- dat %>%
+  unnest_tokens(token, abstract) %>%
+  filter(!(token %in% stop_words$word)) %>%
   group_by(term) %>%
   count(token, sort = TRUE) %>%
-  top_n(5, n)
+  top_n(5, n) %>%
+  arrange(term, desc(n))
+
+knitr::kable(tokens, caption = "Table 1: The 5 most common tokens for each search term")
 ```
 
-- The top 10 tokens mostly are stop words, covid 19 is the most 
+- The top 10 tokens mostly are stop words, covid, 19 is the most frequent words.
+- After removing stop words, covid, 19 is still the most frequent words, but some terms like cancer, prostate, eclampsia come up.
+- The most 5 common tokens for each term are as table shows.
 
 2. Tokenize the abstracts into bigrams. Find the 10 most common bigram and visualize them with ggplot2.
 
-```{r}
+```{r bigrams}
 dat %>%
   unnest_ngrams(token, abstract, n=2) %>%
   count(token, sort = TRUE) %>%
@@ -177,20 +192,26 @@ dat_unitted %>%
   ggtitle("The top 10 common bigrams after removing stop words")
 ```
 
+- After removing stop words, we could see top 10 common bigrams contain more about search terms such as covid 19, prostate cancer, pre eclampsia, systic fibrosis.
+
 3. Calculate the TF-IDF value for each word-search term combination. (here you want the search term to be the “document”) What are the 5 tokens from each search term with the highest TF-IDF value? How are the results different from the answers you got in question 1?
 
-```{r}
-dat %>%
+```{r TF-IDF}
+tf_idf <- dat %>%
   unnest_tokens(token, abstract) %>%
   filter(!(token %in% stop_words$word)) %>%
   group_by(term) %>%
   count(token, sort = TRUE) %>%
   bind_tf_idf(token, term, n) %>%
-  arrange(desc(tf_idf)) %>%
-  top_n(5, n)
+  top_n(5, n) %>%
+  arrange(term, desc(tf_idf)) 
+
+knitr::kable(list(tf_idf[, c(1:3,6)], tokens), 
+            caption = "Table 2: Top 5 tokens with the highest TF-IDF from each term VS Table 1: The 5 most common tokens for each search term")
 ```
 
-
-
-
-
+- Under the term covid: covid and pandemic has the highest TF-IDF value, which excludes 19, patients and disease(TF-IDF=0).
+- Under the term cystic fibrosis: cf becomes the first term instead of fibrosis.
+- Under the term meningitis: patients has a TF-IDF value at 0.
+- Under the term preeclampsia: tokens like pre and woman are excluded(TF-IDF=0).
+- Under the term prostate cancer: only prostate has TF-IDF value.
