@@ -22,9 +22,7 @@ fun1 <- function(mat) {
 }
 
 fun1alt <- function(mat) {
-  for (i in 1:n) {
-    ans[i] <- <- rowsum(mat, group =[i, ] )
-  }
+  ans <- rowSums(mat, na.rm = TRUE)
   ans 
 }
 
@@ -42,7 +40,12 @@ fun2 <- function(mat) {
 }
 
 fun2alt <- function(mat) {
-  # YOUR CODE HERE
+  n <- nrow(mat)
+  ans <- mat
+  for (i in 1:n){
+    ans[i, ] <- cumsum(mat[i, ])
+  }
+  ans
 }
 
 
@@ -55,13 +58,25 @@ microbenchmark::microbenchmark(
   fun1(dat),
   fun1alt(dat), unit = "relative", check = "equivalent"
 )
+```
 
+    ## Unit: relative
+    ##          expr      min       lq    mean   median       uq       max neval
+    ##     fun1(dat) 3.083904 4.502092 3.65637 4.565574 4.525773 0.2585667   100
+    ##  fun1alt(dat) 1.000000 1.000000 1.00000 1.000000 1.000000 1.0000000   100
+
+``` r
 # Test for the second
 microbenchmark::microbenchmark(
   fun2(dat),
   fun2alt(dat), unit = "relative", check = "equivalent"
 )
 ```
+
+    ## Unit: relative
+    ##          expr      min       lq     mean   median       uq      max neval
+    ##     fun2(dat) 8.831184 8.650484 7.948409 8.221164 5.821841 11.97029   100
+    ##  fun2alt(dat) 1.000000 1.000000 1.000000 1.000000 1.000000  1.00000   100
 
 The last argument, check = “equivalent”, is included to make sure that
 the functions return the same result.
@@ -81,6 +96,8 @@ set.seed(156)
 sim_pi(1000) # 3.132
 ```
 
+    ## [1] 3.132
+
 In order to get accurate estimates, we can run this function multiple
 times, with the following code:
 
@@ -93,22 +110,31 @@ system.time({
 })
 ```
 
+    ## [1] 3.14124
+
+    ##    user  system elapsed 
+    ##    2.49    0.00    2.48
+
 Rewrite the previous code using `parLapply()` to make it run faster.
 Make sure you set the seed using `clusterSetRNGStream()`:
 
 ``` r
 library(parallel)
-# YOUR CODE HERE
-cl <- makePSOCKcluster(4)
-clusterSetRNGStream(cl, iseed = 1231)
+
+cl <- makePSOCKcluster(2L)
 
 system.time({
-  clusterExport(cl, varlist = "ans")
-  ans <- parLapply(cl, 1:4000, sim_pi)
+  clusterSetRNGStream(cl, iseed = 1231)
+  ans <- unlist(parLapply(cl, 1:4000, sim_pi, n = 10000))
   print(mean(ans))
   stopCluster(cl)
 })
 ```
+
+    ## [1] 3.141577
+
+    ##    user  system elapsed 
+    ##    0.00    0.00    1.78
 
 ## SQL
 
